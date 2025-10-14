@@ -117,4 +117,3 @@ This is a learning example. In production, you'd want:
 - Error handling and validation
 - Authentication and authorization
 - Rate limiting
-# mcp-example
