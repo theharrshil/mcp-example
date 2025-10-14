@@ -125,6 +125,9 @@ async function main() {
         break;
       case "Query":
         await handleQuery(tools);
+      case "Autonomous Task":
+        await handleAutonomousTask(tools);
+        break;
     }
   }
 }
@@ -236,6 +239,41 @@ async function handleServerMessagePrompt(message: PromptMessage) {
   });
 
   return text;
+}
+
+// Handles an autonomous task
+async function handleAutonomousTask(availableTools: Tool[]) {
+  const taskDescription = await input({
+    message: "Describe a task (e.g., 'Create 3 users with different backgrounds'):",
+  });
+
+  console.log("\n🤖 Agent working autonomously...\n");
+
+  const { text, toolResults } = await generateText({
+    model: googleAI("gemini-2.0-flash"),
+    prompt: `Complete this task: ${taskDescription}. Use the available tools as needed.`,
+    tools: availableTools.reduce(
+      (toolsObject, tool) => ({
+        ...toolsObject,
+        [tool.name]: {
+          description: tool.description,
+          parameters: jsonSchema(tool.inputSchema),
+          execute: async (toolArguments: Record<string, any>) => {
+            console.log(`  ↳ Calling tool: ${tool.name}`);
+            return await mcpClient.callTool({
+              name: tool.name,
+              arguments: toolArguments,
+            });
+          },
+        },
+      }),
+      {} as ToolSet
+    ),
+    maxSteps: 5, // Allow multiple tool calls
+  });
+
+  console.log("\n✅ Task completed!");
+  console.log(text);
 }
 
 main();
